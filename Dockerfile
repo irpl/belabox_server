@@ -35,7 +35,7 @@ COPY start_app.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/start_app.sh
 
 # Expose SRT port
-EXPOSE 5000 5001
+EXPOSE 5000/udp 5001/udp
 
 # Set the script as the ENTRYPOINT
 ENTRYPOINT ["/usr/local/bin/start_app.sh"] 
