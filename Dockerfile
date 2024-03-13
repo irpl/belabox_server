@@ -31,6 +31,9 @@ COPY --from=build-stage /opt/srtla/srtla_rec /usr/local/bin/srtla/srtla_rec
 # Copy the Bash script into the container
 COPY start_app.sh /usr/local/bin/
 
+# Make the script executable
+RUN chmod +x /usr/local/bin/start_app.sh
+
 # Expose SRT port
 EXPOSE 5000 5001
 
