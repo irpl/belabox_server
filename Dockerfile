@@ -1,41 +1,32 @@
-# Base image
-FROM ubuntu:22.04 AS build-stage
+FROM alpine:3.17 AS build-stage
 
 ENV TZ="America/Jamaica"
 
-# Update package lists
-RUN apt update
-RUN apt install -y git build-essential cmake git 
-RUN DEBIAN_FRONTEND=noninteractive apt install -y tcl 
+RUN apk upgrade --no-cache && apk add --no-cache git gcc g++ musl-dev make cmake autoconf automake libtool openssl libssl1.1 libressl-dev linux-headers
 
-RUN apt install -y libssl-dev
-RUN apt install -y libgstreamer1.0-dev
-RUN apt install -y libgstreamer-plugins-base1.0-dev
-RUN apt clean autoremove -y
+WORKDIR /opt/belabox
+RUN git clone https://github.com/BELABOX/srt.git
+RUN git clone https://github.com/BELABOX/srtla.git
 
-# Clone and build belabox's srt
-WORKDIR /opt/srt
-RUN git clone https://github.com/BELABOX/srt.git .
-RUN cmake . && make -j $(nproc)
+# Build srt and srtla
+WORKDIR /opt/belabox/srt
+RUN cmake .
+RUN make -j $(nproc)
 
-# Clone and build srtla
-WORKDIR /opt/srtla
-RUN git clone https://github.com/BELABOX/srtla.git .
-RUN make
+WORKDIR /opt/belabox/srtla
+RUN make -j $(nproc)
 
-FROM ubuntu:22.04
-# Copy binaries to container path
-COPY --from=build-stage /opt/srt/srt-live-transmit /usr/local/bin/srt/srt-live-transmit
-COPY --from=build-stage /opt/srtla/srtla_rec /usr/local/bin/srtla/srtla_rec
+# Or the latest Alpine version
+FROM alpine:3.17
 
-# Copy the Bash script into the container
+RUN apk upgrade --no-cache && apk add --no-cache libgcc libstdc++ libressl
+
+COPY --from=build-stage /opt/belabox/srt/srt-live-transmit /usr/local/bin/srt-live-transmit
+COPY --from=build-stage /opt/belabox/srtla/srtla_rec /usr/local/bin/srtla_rec 
+
 COPY start_app.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/start_app.sh 
 
-# Make the script executable
-RUN chmod +x /usr/local/bin/start_app.sh
+EXPOSE 5000/udp 5001/udp 
 
-# Expose SRT port
-EXPOSE 5000/udp 5001/udp
-
-# Set the script as the ENTRYPOINT
 ENTRYPOINT ["/usr/local/bin/start_app.sh"] 
